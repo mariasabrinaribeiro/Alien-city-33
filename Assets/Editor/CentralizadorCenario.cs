@@ -23,7 +23,7 @@ public class CentralizadorCenario : EditorWindow
     // ─── Objetos encontrados ──────────────────────────────────────────────────
     private List<GameObject> objetosRaiz = new List<GameObject>();
 
-    [MenuItem("Ferramentas Sabrina/🏙️ Centralizar Cenário")]
+    [MenuItem("Ferramentas/🏙️ Centralizar Cenário")]
     public static void AbrirJanela()
     {
         var janela = GetWindow<CentralizadorCenario>("🏙️ Centralizar Cenário");
