@@ -126,8 +126,8 @@ public class PainelDesignPro : EditorWindow
 
         GUILayout.BeginHorizontal();
         GUI.backgroundColor = cAzul;
-        if (GUILayout.Button("🔑  Abrir Keystore Manager", GUILayout.Height(28)))
-            GetWindow<KeystoreManager>("🔑 Keystore");
+       // if (GUILayout.Button("🔑  Abrir Keystore Manager", GUILayout.Height(28)))
+           // GetWindow<KeystoreManager>("🔑 Keystore");
         GUI.backgroundColor = Color.white;
 
         // Botão abrir pasta do keystore
@@ -149,15 +149,7 @@ public class PainelDesignPro : EditorWindow
         DesenharPainelValidacao();
         EditorGUILayout.Space(6);
 
-        GUI.backgroundColor = estadoKS == EstadoValidacao.Valido ? cVerde : cAzul;
-        if (GUILayout.Button(
-            gerandoBuild ? "⏳  Validando..." : "🔍  VALIDAR KEYSTORE AGORA",
-            sBotaoGrande))
-        {
-            ValidarKeystore();
-        }
-        GUI.backgroundColor = Color.white;
-
+    
         GUILayout.EndVertical();
         EditorGUILayout.Space(8);
 
@@ -176,8 +168,8 @@ public class PainelDesignPro : EditorWindow
 
         GUILayout.BeginHorizontal();
         GUI.backgroundColor = cVerde;
-        if (GUILayout.Button("⚡  Injetar Credenciais no PlayerSettings", GUILayout.Height(30)))
-            KeystoreManager.AplicarCredenciaisNoPlayerSettings(silencioso: false);
+       // if (GUILayout.Button("⚡  Injetar Credenciais no PlayerSettings", GUILayout.Height(30)))
+            //KeystoreManager.AplicarCredenciaisNoPlayerSettings(silencioso: false);
         GUI.backgroundColor = Color.white;
 
         if (GUILayout.Button("🛠  Player Settings", GUILayout.Height(30), GUILayout.Width(110)))
@@ -371,7 +363,7 @@ public class PainelDesignPro : EditorWindow
 
         var ferramentas = new (string icone, string nome, string desc, Action acao)[]
         {
-            ("🔑", "Keystore Manager",             "Credenciais Android seguras",           () => GetWindow<KeystoreManager>("🔑 Keystore")),
+           // ("🔑", "Keystore Manager",             "Credenciais Android seguras",           () => GetWindow<KeystoreManager>("🔑 Keystore")),
             ("🚀", "Validador Pré-Build",           "Verifica projeto antes de compilar",    () => GetWindow<ValidadorPreBuild>("🚀 Pré-Build")),
             ("🗂", "Scene Cleaner",                 "Tags, layers e faxina de cena",         () => GetWindow<SceneCleaner>("🗂 Scene Cleaner")),
             ("🧹", "Vassoureiro",                   "Remove GameObjects fantasmas",          () => GetWindow<Vassoureiro>("🧹 Vassoureiro")),
@@ -470,113 +462,8 @@ public class PainelDesignPro : EditorWindow
         GUILayout.EndVertical();
     }
 
-    // ════════════════════════════════════════════════════════
-    //  LÓGICA — VALIDAR KEYSTORE COM KEYTOOL
-    // ════════════════════════════════════════════════════════
-    void ValidarKeystore()
-    {
-        estadoKS    = EstadoValidacao.Verificando;
-        mensagemKS  = "Verificando keystore com keytool...";
-        detalheKS   = "";
-        aliasKS     = "";
-        validadeKS  = "";
-        Repaint();
-
-        string ksPath = EditorPrefs.GetString(KeyPath, "");
-
-        // 1. Arquivo existe?
-        if (string.IsNullOrEmpty(ksPath) || !File.Exists(ksPath))
-        {
-            estadoKS   = EstadoValidacao.ArquivoAusente;
-            mensagemKS = "Arquivo .keystore não encontrado!";
-            detalheKS  = string.IsNullOrEmpty(ksPath)
-                ? "Nenhum caminho definido. Abra o Keystore Manager e configure."
-                : $"Arquivo não existe em:\n{ksPath}";
-            Debug.LogWarning($"[🎛 PainelDesignPro] Keystore não encontrado: {ksPath}");
-            Repaint();
-            return;
-        }
-
-        // 2. Recupera senhas decifradas via reflexão dos EditorPrefs cifrados
-        string ksPass = RecuperarSenha(KeyKSPass);
-        if (string.IsNullOrEmpty(ksPass))
-        {
-            estadoKS   = EstadoValidacao.Invalido;
-            mensagemKS = "Senha do Keystore não definida!";
-            detalheKS  = "Abra o Keystore Manager e salve a senha.";
-            Repaint();
-            return;
-        }
-
-        // 3. Tenta executar o keytool do JDK da Unity
-        string keytool = LocalizarKeytool();
-
-        if (string.IsNullOrEmpty(keytool))
-        {
-            // Fallback: valida apenas existência + tamanho do arquivo
-            ValidarFallback(ksPath, ksPass);
-            return;
-        }
-
-        // 4. Executa keytool -list -v
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName               = keytool,
-                Arguments              = $"-list -v -keystore \"{ksPath}\" -storepass \"{ksPass}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true,
-            };
-
-            using (var proc = Process.Start(psi))
-            {
-                string saida = proc.StandardOutput.ReadToEnd();
-                string erro  = proc.StandardError.ReadToEnd();
-                proc.WaitForExit(8000);
-
-                if (proc.ExitCode == 0)
-                {
-                    // Extrai informações do alias e validade
-                    aliasKS    = ExtrairLinha(saida, "Alias name:");
-                    validadeKS = ExtrairLinha(saida, "Valid from:");
-                    if (string.IsNullOrEmpty(validadeKS))
-                        validadeKS = ExtrairLinha(saida, "until:");
-
-                    estadoKS   = EstadoValidacao.Valido;
-                    mensagemKS = "✅ Keystore VÁLIDO — Senha correta!";
-                    detalheKS  = $"Arquivo: {Path.GetFileName(ksPath)}";
-
-                    Debug.LogWarning($"[🎛 PainelDesignPro] ✅ Keystore validado com sucesso. Alias: {aliasKS}");
-                }
-                else
-                {
-                    // Senha errada ou arquivo corrompido
-                    estadoKS   = EstadoValidacao.Invalido;
-
-                    bool senhaErrada = erro.Contains("password") || erro.Contains("keystore")
-                                    || saida.Contains("password") || proc.ExitCode == 1;
-
-                    mensagemKS = senhaErrada
-                        ? "❌ SENHA INCORRETA! Build seria rejeitada."
-                        : "❌ Erro ao ler o keystore!";
-                    detalheKS = $"Verifique a senha no Keystore Manager.\nErro keytool: {erro.Trim().Split('\n')[0]}";
-
-                    Debug.LogWarning($"[🎛 PainelDesignPro] ❌ Keystore inválido. Exit: {proc.ExitCode}. Erro: {erro.Trim()}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            ValidarFallback(ksPath, ksPass);
-            Debug.LogWarning($"[🎛 PainelDesignPro] keytool falhou, usando validação básica. Detalhes: {ex.Message}");
-        }
-
-        Repaint();
-    }
-
+    
+      
     // ── Localiza o keytool do JDK da Unity ───────────────
     string LocalizarKeytool()
     {
@@ -650,27 +537,7 @@ public class PainelDesignPro : EditorWindow
         Repaint();
     }
 
-    // ── Recupera senha decifrada do EditorPrefs ───────────
-    string RecuperarSenha(string chave)
-    {
-        try
-        {
-            string cifrado = EditorPrefs.GetString(chave, "");
-            if (string.IsNullOrEmpty(cifrado)) return "";
-            // Usa reflexão interna do KeystoreManager para decifrar
-            var metodo = typeof(KeystoreManager).GetMethod(
-                "Decifrar",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            if (metodo != null)
-                return metodo.Invoke(null, new object[] { cifrado }) as string ?? "";
 
-            return ""; // fallback: não conseguiu decifrar
-        }
-        catch
-        {
-            return "";
-        }
-    }
 
     // ════════════════════════════════════════════════════════
     //  LÓGICA — GERAR BUILD
@@ -680,7 +547,7 @@ public class PainelDesignPro : EditorWindow
     void GerarBuild(BuildType tipo)
     {
         // Garante que as credenciais estão no PlayerSettings
-        KeystoreManager.AplicarCredenciaisNoPlayerSettings(silencioso: true);
+       // KeystoreManager.AplicarCredenciaisNoPlayerSettings(silencioso: true);
 
         string pasta   = Path.Combine(Path.GetDirectoryName(Application.dataPath), "Builds", "Android");
         Directory.CreateDirectory(pasta);
