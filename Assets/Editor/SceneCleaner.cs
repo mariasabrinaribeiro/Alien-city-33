@@ -800,7 +800,6 @@ public class SceneCleaner : EditorWindow
     }
 
     Color cCinza() => new Color(0.55f, 0.55f, 0.65f);
-    Color cRoxo   => new Color(0.65f, 0.25f, 1.00f);
 
     // ════════════════════════════════════════════════════════
     //  ESTILOS
