@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Input.getAxis("HORIZONTAL") : MonoBehaviour
+public class InputHorizontalAxis : MonoBehaviour
 {
     // Start is called before the first frame update
     void Start()
